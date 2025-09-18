@@ -1,0 +1,66 @@
+2025-09-18 12:16:33,762 - app.services.crawler_service - INFO - Added 10000 IPs to crawl queue
+2025-09-18 12:16:33,818 - app.services.crawler_service - INFO - Started 50 worker threads
+2025-09-18 12:16:33,845 - app.services.crawler_service - INFO - Added 100 IPs to task queue. Total crawled: 0
+2025-09-18 12:16:34,534 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:34,535 - app.services.crawler_service - ERROR - Error processing IP 171.98.216.78: no such column: content
+2025-09-18 12:16:35,623 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:35,624 - app.services.crawler_service - ERROR - Error processing IP 95.91.90.242: no such column: content
+2025-09-18 12:16:36,443 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:36,444 - app.services.crawler_service - ERROR - Error processing IP 84.167.3.223: no such column: content
+2025-09-18 12:16:40,546 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:40,547 - app.services.crawler_service - ERROR - Error processing IP 103.10.46.251: no such column: content
+2025-09-18 12:16:40,726 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:40,727 - app.services.crawler_service - ERROR - Error processing IP 194.213.122.5: no such column: content
+2025-09-18 12:16:43,771 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:43,772 - app.services.crawler_service - ERROR - Error processing IP 213.184.76.167: no such column: content
+2025-09-18 12:16:45,404 - app.services.crawler_service - INFO - Added 100 IPs to task queue. Total crawled: 0
+2025-09-18 12:16:46,119 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:46,120 - app.services.crawler_service - ERROR - Error processing IP 125.229.84.118: no such column: content
+2025-09-18 12:16:46,480 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:46,481 - app.services.crawler_service - ERROR - Error processing IP 185.117.70.26: no such column: content
+2025-09-18 12:16:48,025 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:48,026 - app.services.crawler_service - ERROR - Error processing IP 190.93.93.88: no such column: content
+2025-09-18 12:16:51,880 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:51,880 - app.services.crawler_service - ERROR - Error processing IP 34.28.245.174: no such column: content
+2025-09-18 12:16:54,935 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:54,936 - app.services.crawler_service - ERROR - Error processing IP 185.99.199.163: no such column: content
+2025-09-18 12:16:56,601 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:56,602 - app.services.crawler_service - ERROR - Error processing IP 139.162.174.152: no such column: content
+2025-09-18 12:16:57,466 - app.services.crawler_service - INFO - Added 100 IPs to task queue. Total crawled: 0
+2025-09-18 12:16:57,855 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:57,855 - app.services.crawler_service - ERROR - Error processing IP 153.9.12.61: no such column: content
+2025-09-18 12:16:57,988 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:57,988 - app.services.crawler_service - ERROR - Error processing IP 62.73.70.155: no such column: content
+2025-09-18 12:16:58,170 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:58,171 - app.services.crawler_service - ERROR - Error processing IP 87.234.48.160: no such column: content
+2025-09-18 12:16:58,976 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:58,977 - app.services.crawler_service - ERROR - Error processing IP 123.176.212.98: no such column: content
+2025-09-18 12:16:59,001 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:16:59,002 - app.services.crawler_service - ERROR - Error processing IP 18.153.84.151: no such column: content
+2025-09-18 12:17:01,095 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:01,095 - app.services.crawler_service - ERROR - Error processing IP 12.231.97.71: no such column: content
+2025-09-18 12:17:04,251 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:04,251 - app.services.crawler_service - ERROR - Error processing IP 34.128.124.60: no such column: content
+2025-09-18 12:17:05,029 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:05,030 - app.services.crawler_service - ERROR - Error processing IP 43.166.2.138: no such column: content
+2025-09-18 12:17:07,166 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:07,167 - app.services.crawler_service - ERROR - Error processing IP 96.78.223.179: no such column: content
+2025-09-18 12:17:09,316 - app.services.crawler_service - INFO - Added 100 IPs to task queue. Total crawled: 0
+2025-09-18 12:17:09,989 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:09,990 - app.services.crawler_service - ERROR - Error processing IP 3.163.100.238: no such column: content
+2025-09-18 12:17:12,855 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:12,856 - app.services.crawler_service - ERROR - Error processing IP 5.147.132.72: no such column: content
+2025-09-18 12:17:15,991 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:15,992 - app.services.crawler_service - ERROR - Error processing IP 210.136.129.78: no such column: content
+2025-09-18 12:17:16,054 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:16,055 - app.services.crawler_service - ERROR - Error processing IP 170.250.76.92: no such column: content
+2025-09-18 12:17:16,944 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:16,949 - app.services.crawler_service - ERROR - Error processing IP 66.176.218.31: no such column: content
+2025-09-18 12:17:21,396 - app.services.crawler_service - INFO - Added 100 IPs to task queue. Total crawled: 0
+2025-09-18 12:17:21,760 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:21,761 - app.services.crawler_service - ERROR - Error processing IP 72.23.23.128: no such column: content
+2025-09-18 12:17:22,105 - app.core.database - ERROR - Database error: no such column: content
+2025-09-18 12:17:22,106 - app.services.crawler_service - ERROR - Error processing IP 23.12.136.173: no such column: content
+2025-09-18 12:17:22,219 - app.services.crawler_service - INFO - Added 1000 IPs to crawl queue
+2025-09-18 12:17:32,369 - app.services.crawler_service - INFO - Stopping crawler...
+2025-09-18 12:17:34,364 - app.services.crawler_service - INFO - Crawler stopped successfully

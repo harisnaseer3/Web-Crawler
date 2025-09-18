@@ -1,0 +1,35 @@
+# Web Crawler Search Engine Dependencies (pure-Python only for easy install)
+
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# HTTP Requests
+requests==2.31.0
+httpx==0.25.2
+
+# HTML Parsing (use built-in html.parser via BeautifulSoup to avoid lxml builds)
+beautifulsoup4==4.12.2
+
+# Optional NLP (kept minimal; advanced TF‑IDF libs removed)
+nltk==3.8.1
+
+# Configuration and Environment
+python-dotenv==1.0.1
+# Use a newer pydantic that has wheels for Python 3.13 on Windows
+pydantic==2.9.2
+pydantic-settings==2.3.4
+
+# Logging and Monitoring
+structlog==23.2.0
+
+# Development and Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
+
+# Additional Utilities
+python-multipart==0.0.6
+jinja2==3.1.2
+

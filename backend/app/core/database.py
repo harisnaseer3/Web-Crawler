@@ -20,7 +20,7 @@ class DatabaseManager:
         self._init_database()
     
     def _init_database(self):
-        """Initialize the database with schema."""
+        """Initialize the database with schema and lightweight migrations."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 if self.schema_path.exists():
@@ -30,6 +30,39 @@ class DatabaseManager:
                     logger.info("Database initialized successfully")
                 else:
                     logger.error(f"Schema file not found at {self.schema_path}")
+
+                # Migrations: add pages.content column if missing
+                try:
+                    cur = conn.cursor()
+                    cur.execute("PRAGMA table_info(pages)")
+                    cols = [row[1] for row in cur.fetchall()]
+                    if 'content' not in cols:
+                        cur.execute("ALTER TABLE pages ADD COLUMN content TEXT")
+                        conn.commit()
+                        logger.info("Added pages.content column")
+                except Exception as mig_e:
+                    logger.warning(f"Migration check (pages.content) error: {mig_e}")
+
+                # Migrations: ensure recent_detections table exists
+                try:
+                    conn.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS recent_detections (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            ip_address TEXT NOT NULL,
+                            detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            status_code INTEGER,
+                            server_info TEXT,
+                            response_time REAL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_recent_detections_ip ON recent_detections(ip_address)")
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_recent_detections_time ON recent_detections(detected_at)")
+                    conn.commit()
+                except Exception as mig_e:
+                    logger.warning(f"Migration check (recent_detections) error: {mig_e}")
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             raise

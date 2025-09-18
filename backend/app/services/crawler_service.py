@@ -188,6 +188,16 @@ class WebCrawlerService:
             logger.info(f"[DETECTED] {ip} status={response.status_code} server='{server_info}' time={response_time:.2f}s")
             with self.lock:
                 self.recent_events.append({'type': 'detected', 'ip': ip, 'status': int(response.status_code), 'server': server_info, 'time': datetime.utcnow().isoformat() + 'Z'})
+            # Persist detection for DB-backed recent positives
+            try:
+                with db_manager.get_connection() as conn:
+                    conn.execute(
+                        "INSERT INTO recent_detections (ip_address, status_code, server_info, response_time) VALUES (?, ?, ?, ?)",
+                        (ip, int(response.status_code), server_info, response_time)
+                    )
+                    conn.commit()
+            except Exception:
+                pass
             return {
                 'status_code': response.status_code,
                 'title': title,
@@ -215,6 +225,7 @@ class WebCrawlerService:
         
         try:
             with db_manager.get_connection() as conn:
+                success = False
                 if result:
                     # Successful crawl considered a positive detection
                     with self.lock:
@@ -236,11 +247,11 @@ class WebCrawlerService:
                     cursor.execute(
                         """INSERT INTO pages 
                         (host_id, url, content_hash, title, meta_description, 
-                         http_status, load_time, content_size, last_crawled)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                         http_status, load_time, content_size, last_crawled, content)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)""",
                         (host_id, f"http://{ip}", content_hash, result['title'], 
                          result['description'], result['status_code'], 
-                         result['response_time'], len(result['content']))
+                         result['response_time'], len(result['content']), result['content'])
                     )
                     page_id = cursor.lastrowid
                     
@@ -280,7 +291,7 @@ class WebCrawlerService:
                     logger.info(f"[STORE] {ip} status={result['status_code']} size={len(result['content'])}")
                     with self.lock:
                         self.recent_events.append({'type': 'stored', 'ip': ip, 'status': int(result['status_code']), 'time': datetime.utcnow().isoformat() + 'Z'})
-                    return True
+                    success = True
                 else:
                     # Mark as failed in hosts table
                     cursor = conn.cursor()
@@ -298,9 +309,10 @@ class WebCrawlerService:
                     )
                     
                     logger.debug(f"[MARK-FAILED] {ip}")
-                    return False
-                
+                    success = False
+
                 conn.commit()
+                return success
         except Exception as e:
             logger.error(f"Error processing IP {ip}: {e}")
             return False

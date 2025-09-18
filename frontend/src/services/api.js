@@ -127,6 +127,26 @@ export const crawlerAPI = {
     const response = await api.get('/crawl/queue/stats');
     return response.data;
   },
+
+  listPositives: async (limit = 20, offset = 0) => {
+    const response = await api.get('/crawl/positives', {
+      params: { limit, offset },
+    });
+    return response.data;
+  },
+
+  addUrlToQueue: async (url, startIfStopped = false) => {
+    const response = await api.post('/crawl/queue/add_url', {
+      url,
+      start_if_stopped: startIfStopped,
+    });
+    return response.data;
+  },
+
+  getRecentDetectedIps: async (limit = 50) => {
+    const response = await api.get('/crawl/live/positives_ips', { params: { limit } });
+    return response.data;
+  },
 };
 
 // Health check

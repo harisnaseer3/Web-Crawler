@@ -493,6 +493,14 @@ class WebCrawlerService:
         with self.lock:
             return list(self.recent_events)[-limit:]
 
+    def get_recent_detected_ips(self, limit: int = 50) -> List[str]:
+        """Return a list of IPs for the most recent 'detected' events, newest first."""
+        with self.lock:
+            detected = [e['ip'] for e in self.recent_events if e.get('type') == 'detected']
+        # Keep order newest last in deque, so reverse to get newest first
+        detected = list(dict.fromkeys(reversed(detected)))  # de-duplicate preserving order
+        return detected[:limit]
+
 
 # Global crawler service instance
 crawler_service = WebCrawlerService()

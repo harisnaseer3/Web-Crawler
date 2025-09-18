@@ -122,6 +122,16 @@ async def get_recent_events(limit: int = 100):
         raise HTTPException(status_code=500, detail=f"Failed to get events: {str(e)}")
 
 
+@router.get("/live/positives_ips")
+async def get_recent_detected_ips(limit: int = 50):
+    """Get recent positively detected IP addresses."""
+    try:
+        return {"ips": crawler_service.get_recent_detected_ips(limit=limit)}
+    except Exception as e:
+        logger.error(f"Error getting recent detected IPs: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get detected IPs: {str(e)}")
+
+
 @router.post("/pause")
 async def pause_crawl():
     """Pause the crawler (temporarily stop processing new IPs)."""

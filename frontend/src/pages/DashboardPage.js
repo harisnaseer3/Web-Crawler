@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useCrawler } from '../services/CrawlerContext';
+import { crawlerAPI } from '../services/api';
 import { 
   Play, 
   Square, 
@@ -32,9 +33,19 @@ const DashboardPage = () => {
   const [network, setNetwork] = useState('0.0.0.0/0');
   const [maxIps, setMaxIps] = useState('');
   const [queueCount, setQueueCount] = useState(1000);
+  const [recentIps, setRecentIps] = useState([]);
 
   useEffect(() => {
     refreshStats();
+    const loadIps = async () => {
+      try {
+        const data = await crawlerAPI.getRecentDetectedIps(50);
+        setRecentIps(data.ips || []);
+      } catch (e) {
+        // ignore network errors in UI
+      }
+    };
+    loadIps();
   }, [refreshStats]);
 
   const handleStartCrawl = async () => {
@@ -347,6 +358,33 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Recent Positive IPs */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Positive IPs</h3>
+            <button
+              onClick={async () => {
+                try {
+                  const data = await crawlerAPI.getRecentDetectedIps(50);
+                  setRecentIps(data.ips || []);
+                } catch {}
+              }}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <RefreshCw className="w-4 h-4" /> Refresh
+            </button>
+          </div>
+          {recentIps && recentIps.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {recentIps.map((ip, idx) => (
+                <span key={idx} className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">{ip}</span>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">No recent detections yet.</div>
+          )}
         </div>
       </div>
     </div>

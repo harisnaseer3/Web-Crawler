@@ -99,6 +99,29 @@ async def get_crawl_stats():
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
 
 
+@router.get("/live/currently-scanning")
+async def get_currently_scanning(limit: int = 50):
+    """Get a snapshot list of IPs currently being scanned."""
+    try:
+        return {
+            "ips": crawler_service.get_currently_scanning(limit=limit),
+            "count": crawler_service.get_currently_scanning_count()
+        }
+    except Exception as e:
+        logger.error(f"Error getting currently scanning: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get currently scanning: {str(e)}")
+
+
+@router.get("/live/events")
+async def get_recent_events(limit: int = 100):
+    """Get recent scan events (scan_start, detected, failed, stored)."""
+    try:
+        return {"events": crawler_service.get_recent_events(limit=limit)}
+    except Exception as e:
+        logger.error(f"Error getting recent events: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get events: {str(e)}")
+
+
 @router.post("/pause")
 async def pause_crawl():
     """Pause the crawler (temporarily stop processing new IPs)."""

@@ -10,7 +10,7 @@ import logging
 import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-from collections import Counter
+from collections import Counter, deque
 from queue import Queue, Empty
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
@@ -19,6 +19,12 @@ from ..core.config import settings
 from ..core.database import db_manager
 
 logger = logging.getLogger(__name__)
+# Ensure logger outputs to console if not already configured
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(threadName)s - %(message)s'))
+    logger.addHandler(_handler)
+logger.setLevel(logging.INFO)
 
 
 class WebCrawlerService:
@@ -30,18 +36,35 @@ class WebCrawlerService:
         self.task_queue = Queue()
         self.lock = threading.Lock()
         self.stop_event = threading.Event()
+        # Live tracking
+        self.currently_scanning: set[str] = set()
+        self.recent_events: deque[dict] = deque(maxlen=200)
+        # Stats counters (in-memory; source of truth is DB where applicable)
+        self.positive_detections_count: int = 0
         
     def generate_random_ips(self, network: str = "0.0.0.0/0", count: int = 1000) -> List[str]:
-        """Generate random IP addresses within a network range."""
+        """Generate random public (global) IPv4 addresses within a network range.
+        Filters out private, loopback (e.g., 127.0.0.0/8), link-local, multicast, and reserved ranges.
+        """
         try:
-            net = ipaddress.ip_network(network)
-            ips = []
-            for _ in range(count):
-                random_ip = ipaddress.IPv4Address(
-                    random.randint(int(net.network_address), int(net.broadcast_address))
-                )
-                ips.append(str(random_ip))
-            return ips
+            net = ipaddress.ip_network(network, strict=False)
+            results: set[str] = set()
+            attempts = 0
+            max_attempts = count * 20  # safety cap to avoid long loops
+            while len(results) < count and attempts < max_attempts:
+                attempts += 1
+                candidate_int = random.randint(int(net.network_address), int(net.broadcast_address))
+                candidate = ipaddress.IPv4Address(candidate_int)
+                # Accept only globally routable addresses
+                if not candidate.is_global:
+                    continue
+                # Additional sanity: avoid network/broadcast of typical subnets (heuristic)
+                if candidate.packed[-1] in (0, 255):
+                    continue
+                results.add(str(candidate))
+            if len(results) < count:
+                logger.warning(f"Generated {len(results)} public IPs out of requested {count} (network={network})")
+            return list(results)
         except Exception as e:
             logger.error(f"Error generating IPs: {e}")
             return []
@@ -80,6 +103,9 @@ class WebCrawlerService:
                 )
                 ips = [row[0] for row in cursor.fetchall()]
                 conn.commit()
+                if ips:
+                    preview = ', '.join(ips[:5])
+                    logger.info(f"[BATCH] Pulled {len(ips)} IPs. Preview: {preview}{' ...' if len(ips) > 5 else ''}")
                 return ips
         except Exception as e:
             logger.error(f"Error getting next IP batch: {e}")
@@ -132,6 +158,10 @@ class WebCrawlerService:
         """Crawl a single IP address on port 80."""
         url = f"http://{ip}"
         try:
+            logger.info(f"[SCAN] {ip}")
+            with self.lock:
+                self.currently_scanning.add(ip)
+                self.recent_events.append({'type': 'scan_start', 'ip': ip, 'time': datetime.utcnow().isoformat() + 'Z'})
             start_time = time.time()
             response = requests.get(
                 url, 
@@ -155,6 +185,9 @@ class WebCrawlerService:
             text_content = soup.get_text()
             keywords = self.extract_keywords(text_content, settings.max_keywords_per_page)
             
+            logger.info(f"[DETECTED] {ip} status={response.status_code} server='{server_info}' time={response_time:.2f}s")
+            with self.lock:
+                self.recent_events.append({'type': 'detected', 'ip': ip, 'status': int(response.status_code), 'server': server_info, 'time': datetime.utcnow().isoformat() + 'Z'})
             return {
                 'status_code': response.status_code,
                 'title': title,
@@ -166,10 +199,14 @@ class WebCrawlerService:
                 'keywords': keywords
             }
         except requests.RequestException as e:
-            logger.debug(f"Failed to crawl {ip}: {e}")
+            logger.debug(f"[FAIL] {ip} {e}")
+            with self.lock:
+                self.recent_events.append({'type': 'failed', 'ip': ip, 'error': str(e), 'time': datetime.utcnow().isoformat() + 'Z'})
             return None
         except Exception as e:
-            logger.error(f"Unexpected error crawling {ip}: {e}")
+            logger.error(f"[ERROR] {ip} {e}")
+            with self.lock:
+                self.recent_events.append({'type': 'error', 'ip': ip, 'error': str(e), 'time': datetime.utcnow().isoformat() + 'Z'})
             return None
     
     def process_ip(self, ip: str) -> bool:
@@ -179,6 +216,9 @@ class WebCrawlerService:
         try:
             with db_manager.get_connection() as conn:
                 if result:
+                    # Successful crawl considered a positive detection
+                    with self.lock:
+                        self.positive_detections_count += 1
                     # Insert or update host information
                     cursor = conn.cursor()
                     cursor.execute(
@@ -237,7 +277,9 @@ class WebCrawlerService:
                         (ip,)
                     )
                     
-                    logger.info(f"Successfully crawled {ip}: {result['status_code']}")
+                    logger.info(f"[STORE] {ip} status={result['status_code']} size={len(result['content'])}")
+                    with self.lock:
+                        self.recent_events.append({'type': 'stored', 'ip': ip, 'status': int(result['status_code']), 'time': datetime.utcnow().isoformat() + 'Z'})
                     return True
                 else:
                     # Mark as failed in hosts table
@@ -255,13 +297,16 @@ class WebCrawlerService:
                         (ip,)
                     )
                     
-                    logger.debug(f"Failed to crawl {ip}")
+                    logger.debug(f"[MARK-FAILED] {ip}")
                     return False
                 
                 conn.commit()
         except Exception as e:
             logger.error(f"Error processing IP {ip}: {e}")
             return False
+        finally:
+            with self.lock:
+                self.currently_scanning.discard(ip)
     
     def worker(self):
         """Worker thread function to process IPs from the queue."""
@@ -271,6 +316,7 @@ class WebCrawlerService:
                 if ip is None:  # Sentinel value to stop
                     break
                 
+                logger.info(f"[WORKER] {threading.current_thread().name} picked {ip}")
                 self.process_ip(ip)
                 self.task_queue.task_done()
                 
@@ -427,11 +473,25 @@ class WebCrawlerService:
                     'crawl_status': crawl_state[0] if crawl_state else 'unknown',
                     'total_crawled': crawl_state[1] if crawl_state else 0,
                     'last_update': crawl_state[2] if crawl_state else None,
-                    'queue_size': queue_size
+                    'queue_size': queue_size,
+                    'currently_scanning': self.get_currently_scanning_count(),
+                    'positive_detections': self.positive_detections_count
                 }
         except Exception as e:
             logger.error(f"Error getting stats: {e}")
             return {}
+
+    def get_currently_scanning(self, limit: int = 50) -> List[str]:
+        with self.lock:
+            return list(list(self.currently_scanning)[:limit])
+
+    def get_currently_scanning_count(self) -> int:
+        with self.lock:
+            return len(self.currently_scanning)
+
+    def get_recent_events(self, limit: int = 100) -> List[Dict]:
+        with self.lock:
+            return list(self.recent_events)[-limit:]
 
 
 # Global crawler service instance

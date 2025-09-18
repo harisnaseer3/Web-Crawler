@@ -8,7 +8,6 @@ import {
   Globe, 
   FileText, 
   Tag, 
-  Clock,
   Activity,
   Database,
   Server
@@ -293,6 +292,12 @@ const DashboardPage = () => {
             value={stats.total_keywords?.toLocaleString() || '0'}
             icon={<Tag className="w-6 h-6" />}
             color="text-orange-600"
+          />
+          <StatCard
+            title="Positive Detections"
+            value={stats.positive_detections?.toLocaleString() || '0'}
+            icon={<Activity className="w-6 h-6" />}
+            color="text-red-600"
           />
         </div>
 

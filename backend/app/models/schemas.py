@@ -41,6 +41,7 @@ class CrawlStats(BaseModel):
     total_crawled: int
     last_update: Optional[datetime] = None
     queue_size: int = 0
+    positive_detections: int = 0
 
 
 class CrawlRequest(BaseModel):

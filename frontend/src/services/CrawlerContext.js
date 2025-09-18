@@ -15,6 +15,7 @@ const initialState = {
     total_crawled: 0,
     last_update: null,
     queue_size: 0,
+    positive_detections: 0,
   },
   loading: false,
   error: null,

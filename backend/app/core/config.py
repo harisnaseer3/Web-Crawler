@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     max_keywords_per_page: int = 20
     min_keyword_length: int = 3
     
+    # Detection filtering
+    desired_status_codes: list = [200, 301, 302, 303, 307, 308]  # Only store successful/redirect responses
+    use_https_only: bool = False  # Try HTTPS first, fallback to HTTP
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

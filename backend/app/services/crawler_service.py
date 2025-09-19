@@ -155,69 +155,71 @@ class WebCrawlerService:
         return keywords
     
     def crawl_ip(self, ip: str) -> Optional[Dict]:
-        """Crawl a single IP address on port 80."""
-        url = f"http://{ip}"
-        try:
-            logger.info(f"[SCAN] {ip}")
-            with self.lock:
-                self.currently_scanning.add(ip)
-                self.recent_events.append({'type': 'scan_start', 'ip': ip, 'time': datetime.utcnow().isoformat() + 'Z'})
-            start_time = time.time()
-            response = requests.get(
-                url, 
-                timeout=settings.request_timeout,
-                headers={'User-Agent': 'Mozilla/5.0 (compatible; WebCrawler/1.0)'}
-            )
-            response_time = time.time() - start_time
-            
-            # Parse HTML content
-            soup = BeautifulSoup(response.text, 'html.parser')
-            title = soup.title.string if soup.title else None
-            
-            # Extract meta description
-            meta_desc = soup.find('meta', attrs={'name': 'description'})
-            description = meta_desc['content'] if meta_desc else None
-            
-            # Extract server information
-            server_info = response.headers.get('Server', '')
-            
-            # Extract keywords from page content
-            text_content = soup.get_text()
-            keywords = self.extract_keywords(text_content, settings.max_keywords_per_page)
-            
-            logger.info(f"[DETECTED] {ip} status={response.status_code} server='{server_info}' time={response_time:.2f}s")
-            with self.lock:
-                self.recent_events.append({'type': 'detected', 'ip': ip, 'status': int(response.status_code), 'server': server_info, 'time': datetime.utcnow().isoformat() + 'Z'})
-            # Persist detection for DB-backed recent positives
+        """Crawl a single IP address, trying HTTPS first, then HTTP fallback."""
+        # Try HTTPS first if configured, otherwise try HTTP
+        urls_to_try = [f"https://{ip}"] if settings.use_https_only else [f"https://{ip}", f"http://{ip}"]
+        
+        for url in urls_to_try:
             try:
-                with db_manager.get_connection() as conn:
-                    conn.execute(
-                        "INSERT INTO recent_detections (ip_address, status_code, server_info, response_time) VALUES (?, ?, ?, ?)",
-                        (ip, int(response.status_code), server_info, response_time)
-                    )
-                    conn.commit()
-            except Exception:
-                pass
-            return {
-                'status_code': response.status_code,
-                'title': title,
-                'description': description,
-                'response_time': response_time,
-                'server_info': server_info,
-                'content_type': response.headers.get('Content-Type', ''),
-                'content': response.text,
-                'keywords': keywords
-            }
-        except requests.RequestException as e:
-            logger.debug(f"[FAIL] {ip} {e}")
-            with self.lock:
-                self.recent_events.append({'type': 'failed', 'ip': ip, 'error': str(e), 'time': datetime.utcnow().isoformat() + 'Z'})
-            return None
-        except Exception as e:
-            logger.error(f"[ERROR] {ip} {e}")
-            with self.lock:
-                self.recent_events.append({'type': 'error', 'ip': ip, 'error': str(e), 'time': datetime.utcnow().isoformat() + 'Z'})
-            return None
+                logger.info(f"[SCAN] {ip} ({url})")
+                with self.lock:
+                    self.currently_scanning.add(ip)
+                    self.recent_events.append({'type': 'scan_start', 'ip': ip, 'time': datetime.utcnow().isoformat() + 'Z'})
+                start_time = time.time()
+                response = requests.get(
+                    url, 
+                    timeout=settings.request_timeout,
+                    headers={'User-Agent': 'Mozilla/5.0 (compatible; WebCrawler/1.0)'}
+                )
+                response_time = time.time() - start_time
+                
+                # Parse HTML content
+                soup = BeautifulSoup(response.text, 'html.parser')
+                title = soup.title.string if soup.title else None
+                
+                # Extract meta description
+                meta_desc = soup.find('meta', attrs={'name': 'description'})
+                description = meta_desc['content'] if meta_desc else None
+                
+                # Extract server information
+                server_info = response.headers.get('Server', '')
+                
+                # Extract keywords from page content
+                text_content = soup.get_text()
+                keywords = self.extract_keywords(text_content, settings.max_keywords_per_page)
+                
+                logger.info(f"[DETECTED] {ip} status={response.status_code} server='{server_info}' time={response_time:.2f}s")
+                with self.lock:
+                    self.recent_events.append({'type': 'detected', 'ip': ip, 'status': int(response.status_code), 'server': server_info, 'time': datetime.utcnow().isoformat() + 'Z'})
+                # Only store detections with desired status codes
+                if response.status_code in settings.desired_status_codes:
+                    try:
+                        with db_manager.get_connection() as conn:
+                            conn.execute(
+                                "INSERT INTO recent_detections (ip_address, status_code, server_info, response_time) VALUES (?, ?, ?, ?)",
+                                (ip, int(response.status_code), server_info, response_time)
+                            )
+                            conn.commit()
+                    except Exception:
+                        pass
+                return {
+                    'status_code': response.status_code,
+                    'title': title,
+                    'description': description,
+                    'response_time': response_time,
+                    'server_info': server_info,
+                    'content_type': response.headers.get('Content-Type', ''),
+                    'content': response.text,
+                    'keywords': keywords
+                }
+            except requests.RequestException as e:
+                logger.debug(f"[FAIL] {ip} {url} {e}")
+                continue  # Try next URL if this one failed
+        
+        # If all URLs failed
+        with self.lock:
+            self.recent_events.append({'type': 'failed', 'ip': ip, 'error': 'All URLs failed', 'time': datetime.utcnow().isoformat() + 'Z'})
+        return None
     
     def process_ip(self, ip: str) -> bool:
         """Process a single IP address and store results in database."""
@@ -226,8 +228,8 @@ class WebCrawlerService:
         try:
             with db_manager.get_connection() as conn:
                 success = False
-                if result:
-                    # Successful crawl considered a positive detection
+                if result and result['status_code'] in settings.desired_status_codes:
+                    # Successful crawl with desired status code considered a positive detection
                     with self.lock:
                         self.positive_detections_count += 1
                     # Insert or update host information
@@ -249,7 +251,7 @@ class WebCrawlerService:
                         (host_id, url, content_hash, title, meta_description, 
                          http_status, load_time, content_size, last_crawled, content)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)""",
-                        (host_id, f"http://{ip}", content_hash, result['title'], 
+                        (host_id, f"https://{ip}", content_hash, result['title'], 
                          result['description'], result['status_code'], 
                          result['response_time'], len(result['content']), result['content'])
                     )

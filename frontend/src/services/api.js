@@ -147,12 +147,71 @@ export const crawlerAPI = {
     const response = await api.get('/crawl/live/positives_ips', { params: { limit } });
     return response.data;
   },
+
+  // Internal Crawler API
+  startInternalCrawl: async () => {
+    const response = await api.post('/crawl/internal/start');
+    return response.data;
+  },
+
+  crawlSpecificHost: async (ip) => {
+    const response = await api.post(`/crawl/internal/crawl-host/${ip}`);
+    return response.data;
+  },
+
+  getPositiveDetections: async () => {
+    const response = await api.get('/crawl/internal/positive-detections');
+    return response.data;
+  },
+
+  getInternalCrawlStats: async () => {
+    const response = await api.get('/crawl/internal/stats');
+    return response.data;
+  },
+
+  getInternalCrawlProgress: async () => {
+    const response = await api.get('/crawl/internal/progress');
+    return response.data;
+  },
+
+  getInternalCrawlEvents: async (limit = 50) => {
+    const response = await api.get('/crawl/internal/events', { params: { limit } });
+    return response.data;
+  },
+
+  getInternalCrawlStatus: async () => {
+    const response = await api.get('/crawl/internal/status');
+    return response.data;
+  },
 };
 
 // Health check
 export const healthAPI = {
   check: async () => {
     const response = await api.get('/health');
+    return response.data;
+  },
+};
+
+// DNS Discovery API
+export const dnsAPI = {
+  enrichIp: async (ip) => {
+    const response = await api.get(`/crawl/dns/enrich/${ip}`);
+    return response.data;
+  },
+
+  getServersStatus: async () => {
+    const response = await api.get('/crawl/dns/servers/status');
+    return response.data;
+  },
+
+  getDiscoveryStats: async () => {
+    const response = await api.get('/crawl/dns/discovery/stats');
+    return response.data;
+  },
+
+  discoverUrls: async (ip) => {
+    const response = await api.post(`/crawl/dns/discover/${ip}`);
     return response.data;
   },
 };

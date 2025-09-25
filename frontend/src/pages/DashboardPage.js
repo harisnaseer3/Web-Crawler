@@ -34,6 +34,8 @@ const DashboardPage = () => {
   const [maxIps, setMaxIps] = useState('');
   const [queueCount, setQueueCount] = useState(1000);
   const [recentIps, setRecentIps] = useState([]);
+  const [internalCrawlLoading, setInternalCrawlLoading] = useState(false);
+  const [internalCrawlStats, setInternalCrawlStats] = useState(null);
 
   useEffect(() => {
     refreshStats();
@@ -45,7 +47,16 @@ const DashboardPage = () => {
         // ignore network errors in UI
       }
     };
+    const loadInternalStats = async () => {
+      try {
+        const data = await crawlerAPI.getInternalCrawlStats();
+        setInternalCrawlStats(data);
+      } catch (e) {
+        // ignore network errors in UI
+      }
+    };
     loadIps();
+    loadInternalStats();
   }, [refreshStats]);
 
   const handleStartCrawl = async () => {
@@ -85,6 +96,46 @@ const DashboardPage = () => {
       await populateQueue(network, queueCount);
     } catch (error) {
       console.error('Failed to populate queue:', error);
+    }
+  };
+
+  const handleStartInternalCrawl = async () => {
+    try {
+      setInternalCrawlLoading(true);
+      console.log('Starting internal crawl...');
+      
+      const response = await crawlerAPI.startInternalCrawl();
+      console.log('Internal crawl response:', response);
+      
+      // Start polling for progress
+      const pollProgress = setInterval(async () => {
+        try {
+          const progressData = await crawlerAPI.getInternalCrawlProgress();
+          console.log('Progress update:', progressData);
+          
+          if (!progressData.is_running) {
+            clearInterval(pollProgress);
+            setInternalCrawlLoading(false);
+            // Refresh stats when completed
+            refreshStats();
+            const loadInternalStats = async () => {
+              try {
+                const data = await crawlerAPI.getInternalCrawlStats();
+                setInternalCrawlStats(data);
+              } catch (e) {
+                console.error('Failed to load internal stats:', e);
+              }
+            };
+            loadInternalStats();
+          }
+        } catch (e) {
+          console.error('Failed to get progress:', e);
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Failed to start internal crawl:', error);
+      setInternalCrawlLoading(false);
     }
   };
 
@@ -311,6 +362,31 @@ const DashboardPage = () => {
             color="text-red-600"
           />
         </div>
+
+        {/* Internal Page Discovery Section */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Internal Page Discovery
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            ✅ <strong>Automatic!</strong> The main crawler now automatically discovers and crawls internal pages for all positive detections. No separate action needed.
+          </p>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-800">
+                  <strong>Internal page discovery is now automatic!</strong> When the main crawler finds a positive detection, it automatically discovers and crawls all internal pages (like /about, /contact, /products, etc.) and stores their full URLs in the database.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
 
         {/* Additional Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
